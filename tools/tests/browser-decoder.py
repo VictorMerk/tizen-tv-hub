@@ -9,7 +9,7 @@ with sync_playwright() as p:
  page.set_content('<div id="night-player"><object></object></div>')
  page.add_script_tag(content="""
  window.NightService={log:function(){}};window.instances=[];window.readyCount=0;window.failCount=0;
- window.Hls=function(){this.events={};this.levels=[{bitrate:3000000},{bitrate:5000000}];this.audioTracks=[{lang:'en'},{lang:'de'}];instances.push(this)};
+ window.Hls=function(){this.events={};this.levels=[{bitrate:3000000,height:720,width:1280},{bitrate:5000000,height:1080,width:1920}];this.audioTracks=[{lang:'en'},{lang:'de'}];instances.push(this)};
  Hls.isSupported=function(){return true};Hls.Events={BUFFER_CODECS:'codecs',MANIFEST_PARSED:'manifest',ERROR:'error'};
  Hls.prototype.on=function(k,f){this.events[k]=f};Hls.prototype.loadSource=function(){};Hls.prototype.attachMedia=function(){};Hls.prototype.destroy=function(){this.destroyed=true};
  """)
@@ -22,6 +22,9 @@ with sync_playwright() as p:
  assert page.evaluate('readyCount===0&&failCount===0&&instances[0].destroyed')
  page.evaluate("document.querySelector('video').dispatchEvent(new Event('loadedmetadata'));decoder.setStreamingProperty('ADAPTIVE_INFO','BITRATES=3000000~3000000');decoder.setSelectTrack('AUDIO',1)")
  assert page.evaluate('readyCount===1&&instances[1].currentLevel===0&&instances[1].audioTrack===1')
+ page.evaluate('decoder.setQualityHeight(1080)')
+ assert page.evaluate('instances[1].currentLevel')==1
+ assert page.evaluate('decoder.getPlaybackInfo().variants.map(v=>v.height)')==[720,1080]
  assert page.evaluate('decoder.getTotalTrackInfo().filter(t=>t.type==="AUDIO").length')==2
  page.evaluate('decoder.close()');assert page.locator('video').count()==0
  assert not errors,errors
