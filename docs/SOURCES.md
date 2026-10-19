@@ -52,3 +52,17 @@ The measured data rate is compressed main-segment payload bytes divided by segme
 duration across up to eight recent samples. It is approximate, scene-dependent and
 not a sharpness score. The advertised rate is the manifest's value. These quantities
 are not the same as internet speed or a promise of visual quality.
+
+### Inception comparison, 19 October 2026
+
+The user reported blurry/blocky Nebula playback while the TV continued decoding
+2592x1080 at approximately 4.7 Mbit/s. The converter preserves compressed samples;
+this observation does not establish whether the upstream file was upscaled or
+which encoding decision caused its poor detail.
+
+Lisbon advertised a 4K rendition. Its HEVC video initialization and sampled video
+fragment returned HTTP 200; both separate audio playlists loaded, but sampled audio
+fragments returned HTTP 502 (`origin unavailable`). Its sampled 1080p resource also
+returned HTTP 502. A local relay trial did not recover normal playback with sound
+and is excluded from the release. Other tested alternatives did not establish a
+better working copy. Source availability can change.

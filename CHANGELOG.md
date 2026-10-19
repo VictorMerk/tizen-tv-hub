@@ -1,5 +1,10 @@
 # Changelog
 
+## Movie Night TV 0.7.1
+
+- Clarify that decoded dimensions do not measure source sharpness; retain the working TV-local AVC/AAC converter.
+- Investigate Inception source quality: Nebula remained 2592x1080 at about 4.7 Mbit/s; Lisbon video fragments responded, but both advertised audio fragment feeds returned HTTP 502. No better working copy or 4K playback is claimed.
+
 ## Movie Night TV 0.7
 
 - Add a TV-local lossless AVC/AAC fMP4-to-MPEG-TS converter for Cinejoy, feeding Samsung's native decoder through a loopback-only server. No PC is required.
