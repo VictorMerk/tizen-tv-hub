@@ -57,6 +57,14 @@ Full-film playback, every provider/title, subtitles and 4K are not certified.
 
 ## Runtime and privacy
 
+Version 0.6.1 also corrects a narrowly matched MP4 display-metadata case in the
+local browser fragment loader: 1920-wide AVC samples, 481:480 pixel aspect and a
+1924-wide track header. The init segment is copied and those two display fields
+are corrected to square pixels / 1920. This lets Buddy's higher Cinejoy rendition
+play on the tested TV. Encoded video/audio samples are not re-encoded or upscaled;
+other pixel aspects and media fragments are unchanged. This does not add new
+renditions to a provider that only supplies 720p.
+
 Clients load lazily when selected. Small compatibility shims cover `globalThis`,
 microtasks, `Object.fromEntries`, and country/language label display. The app still
 uses the firmware's browser and Samsung's native decoder where compatible.

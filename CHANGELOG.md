@@ -1,5 +1,11 @@
 # Changelog
 
+## Movie Night TV 0.6.1
+
+- Correct the matched 1920-wide AVC / 481:480 pixel-aspect MP4 metadata that made Chromium 69 report a 1924-wide picture and reject Buddy's higher Cinejoy rendition. Encoded video and audio samples are unchanged.
+- Physically test Buddy at 1920x1040 on Cinejoy / Nebula; the user confirmed a sharper picture with working sound.
+- Cover the correction, unchanged square/anamorphic media, truncated input, original-buffer preservation and loader callbacks with synthetic MP4 fixtures.
+
 ## Movie Night TV 0.6
 
 - Add lazy-loaded Movy / Dallas and Cinejoy / Nebula adapters using locally converted ordinary service clients. No PC is needed during playback.

@@ -2,6 +2,29 @@
 (function(){
     'use strict';
     var loading=null;
+    // Some 1920-wide AVC files use 481:480 pixels and a 1924-wide track header.
+    // Chromium 69 rejects that display width. Correct only this matched MP4 case;
+    // leave the encoded samples, real anamorphic video and other tracks intact.
+    function tvInitSegment(buffer){
+        if(!(buffer instanceof ArrayBuffer))return buffer;
+        var view=new DataView(buffer),changes=[];
+        function boxes(start,end){var result=[];while(start<end){if(start+8>end)return [];var size=view.getUint32(start);if(size<8||start+size>end)return [];var type='';for(var j=4;j<8;j++)type+=String.fromCharCode(view.getUint8(start+j));result.push({type:type,start:start,end:start+size});start+=size;}return result;}
+        function child(box,type,skip){return boxes(box.start+8+(skip||0),box.end).filter(function(b){return b.type===type;})[0];}
+        try{boxes(0,buffer.byteLength).filter(function(b){return b.type==='moov';}).forEach(function(moov){
+            boxes(moov.start+8,moov.end).filter(function(b){return b.type==='trak';}).forEach(function(trak){
+                var header=child(trak,'tkhd'),mdia=child(trak,'mdia'),minf=mdia&&child(mdia,'minf'),stbl=minf&&child(minf,'stbl'),stsd=stbl&&child(stbl,'stsd'),avc=stsd&&child(stsd,'avc1',8);
+                if(!header||header.start+92>header.end||view.getUint8(header.start+8)!==0||!avc||avc.start+86>avc.end||view.getUint16(avc.start+32)!==1920)return;
+                var pasp=child(avc,'pasp',78);
+                if(pasp&&pasp.end-pasp.start===16&&view.getUint32(pasp.start+8)===481&&view.getUint32(pasp.start+12)===480&&view.getUint32(header.start+84)===1924*65536){changes.push(pasp.start+8,header.start+84);}
+            });
+        });}catch(ignore){return buffer;}
+        if(!changes.length)return buffer;
+        var copy=buffer.slice(0),output=new DataView(copy);for(var i=0;i<changes.length;i+=2){output.setUint32(changes[i],480);output.setUint32(changes[i+1],1920*65536);}return copy;
+    }
+    function tvFragmentLoader(config){
+        var loader=new Hls.DefaultConfig.loader(config),load=loader.load;
+        loader.load=function(context,settings,callbacks){var handlers=Object.assign({},callbacks);handlers.onSuccess=function(response,stats,ctx,network){if(response.data instanceof ArrayBuffer)response.data=tvInitSegment(response.data);callbacks.onSuccess(response,stats,ctx,network);};return load.call(loader,context,settings,handlers);};return loader;
+    }
     function library(){if(window.Hls)return Promise.resolve();if(loading)return loading;loading=new Promise(function(resolve,reject){var script=document.createElement('script');script.src='hls.min.js';script.onload=resolve;script.onerror=function(){loading=null;reject(Error('Videomodul konnte nicht geladen werden'));};document.head.appendChild(script);});return loading;}
     window.makeBrowserPlayer=function(){
         var video=null,hls=null,source='',mode='NONE',listener={},onReady=null,onFail=null,bandwidth=null,qualityHeight=0,ready=false,codecAudio=null,codecVideo=null,generation=0,rateSamples=[];
@@ -25,7 +48,7 @@
             getPlaybackInfo:function(){var level=hls&&hls.levels[hls.currentLevel],bytes=0,seconds=0;rateSamples.forEach(function(s){bytes+=s.bytes;seconds+=s.seconds;});return {width:video&&video.videoWidth||0,height:video&&video.videoHeight||0,bitrate:level&&level.bitrate||0,measuredBitrate:seconds?Math.round(bytes*8/seconds):0,variants:hls?hls.levels.filter(function(l){return l.height;}).map(function(l){return {height:l.height,width:l.width,bitrate:l.bitrate};}):[],error:video&&video.error?{code:video.error.code,message:video.error.message||''}:null};},
             setListener:function(value){listener=value;},
             prepareAsync:function(ok,bad){var run=generation;onReady=ok;onFail=bad;if(/\.mp4(?:$|[?&])/i.test(source)){video.src=source;return;}library().then(function(){if(!video||run!==generation)return;if(Hls.isSupported()){
-                hls=new Hls({enableWorker:false,abrEwmaDefaultEstimate:5000000,maxBufferLength:30,maxMaxBufferLength:45,backBufferLength:15,manifestLoadingMaxRetry:1,fragLoadingMaxRetry:2,manifestLoadingTimeOut:12000,fragLoadingTimeOut:12000});
+                hls=new Hls({fLoader:tvFragmentLoader,enableWorker:false,abrEwmaDefaultEstimate:5000000,maxBufferLength:30,maxMaxBufferLength:45,backBufferLength:15,manifestLoadingMaxRetry:1,fragLoadingMaxRetry:2,manifestLoadingTimeOut:12000,fragLoadingTimeOut:12000});
                 hls.on(Hls.Events.BUFFER_CODECS,function(e,data){codecAudio=data.audio;codecVideo=data.video;});
                 hls.on(Hls.Events.MANIFEST_PARSED,applyQuality);
                 hls.on(Hls.Events.FRAG_LOADED,function(e,data){if(run!==generation||!data.frag||data.frag.type!=='main')return;var bytes=data.payload&&data.payload.byteLength,seconds=data.frag.duration;if(bytes>0&&seconds>0){rateSamples.push({bytes:bytes,seconds:seconds});if(rateSamples.length>8)rateSamples.shift();}});

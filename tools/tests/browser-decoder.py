@@ -9,13 +9,38 @@ with sync_playwright() as p:
  page.set_content('<div id="night-player"><object></object></div>')
  page.add_script_tag(content="""
  window.NightService={log:function(){}};window.instances=[];window.readyCount=0;window.failCount=0;
- window.Hls=function(){this.events={};this.levels=[{bitrate:3000000,height:720,width:1280},{bitrate:5000000,height:1080,width:1920}];this.audioTracks=[{lang:'en'},{lang:'de'}];instances.push(this)};
+ window.Hls=function(config){this.config=config;this.events={};this.levels=[{bitrate:3000000,height:720,width:1280},{bitrate:5000000,height:1080,width:1920}];this.audioTracks=[{lang:'en'},{lang:'de'}];instances.push(this)};
+ Hls.DefaultConfig={loader:function(){this.load=function(ctx,cfg,cb){cb.onSuccess({data:ctx.fixture},'stats',ctx,'network')};this.destroy=function(){}}};
  Hls.isSupported=function(){return true};Hls.Events={BUFFER_CODECS:'codecs',MANIFEST_PARSED:'manifest',ERROR:'error',FRAG_LOADED:'fragment'};
  Hls.prototype.on=function(k,f){this.events[k]=f};Hls.prototype.loadSource=function(){};Hls.prototype.attachMedia=function(){};Hls.prototype.destroy=function(){this.destroyed=true};
  """)
  page.add_script_tag(content=(root/'cinema/tv-browser-player.js').read_text(encoding='utf-8'))
  page.evaluate("window.decoder=makeBrowserPlayer();decoder.open('https://media.test/master.m3u8');decoder.prepareAsync(function(){readyCount++},function(){failCount++})")
  page.wait_for_function('instances.length===1')
+ # Synthetic MP4: correct the matched display metadata, never coded video/audio.
+ page.evaluate("""window.testInit=function(ratio,width){
+ function box(type,payload){var b=new Uint8Array(8+payload.length),v=new DataView(b.buffer);v.setUint32(0,b.length);for(var i=0;i<4;i++)b[4+i]=type.charCodeAt(i);b.set(payload,8);return b;}
+ function cat(){var a=Array.prototype.slice.call(arguments),b=new Uint8Array(a.reduce(function(n,x){return n+x.length},0)),p=0;a.forEach(function(x){b.set(x,p);p+=x.length});return b;}
+ var tk=new Uint8Array(84);new DataView(tk.buffer).setUint32(76,width*65536);
+ var sample=new Uint8Array(78);new DataView(sample.buffer).setUint16(24,1920);new DataView(sample.buffer).setUint16(26,1040);
+ var aspect=new Uint8Array(8),v=new DataView(aspect.buffer);v.setUint32(0,ratio);v.setUint32(4,480);
+ var stsd=box('stsd',cat(new Uint8Array([0,0,0,0,0,0,0,1]),box('avc1',cat(sample,box('pasp',aspect)))));
+ var track=box('trak',cat(box('tkhd',tk),box('mdia',box('minf',box('stbl',stsd)))));
+ return cat(box('ftyp',new Uint8Array(8)),box('moov',track),box('mdat',new Uint8Array([1,2,3,4]))).buffer;
+ };
+ window.correctInit=function(buffer){var output,loader=new instances[0].config.fLoader({});loader.load({fixture:buffer},{},{onSuccess:function(r,s,c,n){if(s!=='stats'||n!=='network')throw Error('Lost loader metadata');output=r.data;}});return output;};
+ """)
+ checks=page.evaluate("""function(){var original=testInit(481,1924),copy=original.slice(0),fixed=correctInit(original);return {
+ changed:fixed!==original,unchangedInput:Array.from(new Uint8Array(original)).join()===Array.from(new Uint8Array(copy)).join(),
+ corrected:correctInit(fixed)===fixed,
+ expectedMetadata:Array.from(new Uint8Array(fixed)).join()===Array.from(new Uint8Array(testInit(480,1920))).join(),
+ untouchedSquare: (function(){var b=testInit(480,1920);return correctInit(b)===b})(),
+ untouchedAnamorphic:(function(){var b=testInit(640,2560);return correctInit(b)===b})(),
+ untouchedTruncated:(function(){var b=original.slice(0,original.byteLength-25);return correctInit(b)===b})(),
+ differences:Array.from(new Uint8Array(original)).filter(function(x,i){return x!==new Uint8Array(fixed)[i]}).length
+ }}""")
+ assert all(checks[k] for k in checks if k!='differences'),checks
+ assert checks['differences']==2,checks
  page.evaluate("window.oldVideo=document.querySelector('video');decoder.close();decoder.open('https://media.test/new.m3u8');decoder.prepareAsync(function(){readyCount++},function(){failCount++})")
  page.wait_for_function('instances.length===2')
  page.evaluate("oldVideo.dispatchEvent(new Event('loadedmetadata'));instances[0].events.error(null,{fatal:true,details:'late error'})")

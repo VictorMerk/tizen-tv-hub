@@ -70,12 +70,20 @@ Both clients were packaged locally and checked after installation. Native fetch 
 | Sample | Adapter | Observed result |
 | --- | --- | --- |
 | Buddy | Movy / Dallas | Native player reported 1280x692. User confirmed picture and sound, but wanted 1080p. The sampled playlist only advertised that 720p-class rendition. |
-| Buddy | Cinejoy / Nebula | Browser decoder failed on the higher rendition (read as 1924x1040), then the installed app retried at 1280x692 on Cinejoy. The user reported it was still 720p. |
+| Buddy | Cinejoy / Nebula | Version 0.6 initially fell back from 1924x1040 to 1280x692. The 0.6.1 display-metadata correction recovered the higher rendition at 1920x1040. User confirmed a sharper picture and working sound. |
 | Inception | Cinejoy / Nebula | Higher rendition failed; retry played at reported 1728x720. |
 | Inception | Movy / Dallas | Missing-resolution selection fix increased reported playback from 640x266 (0.24 Mbit/s) to 1280x534 (1.01 Mbit/s). |
 | Breaking Bad S1E1 | Cinejoy / Nebula | Fresh installed-package playback advanced at reported 1920x1080. This establishes that this service is not universally limited to 720p on the TV. |
 | Breaking Bad S1E1 | Movy / Dallas | Playlist omitted resolution labels. Before the selection fix it played 640x360; selecting the higher 3.5 Mbit/s rung played 1280x720. |
 
 Advancing clocks and track metadata do not independently prove audible output or visual sharpness. Only the stated user confirmations are human verification; full-film playback and 4K remain unverified. Samsung native decoder configuration and a typed local-playlist experiment did not recover Buddy's higher rendition; the experimental files were removed and filesystem privileges are not part of the final app.
+
+Further inspection found Buddy's H.264 SPS and AVC sample entry specify 1920x1040,
+8-bit 4:2:0, High profile / level 4.0. A 481:480 pixel-aspect box and 1924-wide
+track header enlarged the reported display width. Correcting that matched init
+metadata to square pixels / 1920 allowed the same higher rendition to play on
+Chromium 69 at about 5.7 Mbit/s declared bitrate. The encoded samples remain
+unchanged. This is a demonstrated fix for this file's playback failure, not a
+general new browser engine or a guarantee for every title.
 
 Other sampled Movy providers returned HTTP 403/404 or server errors on this packaged TV app. Cinejoy Lisbon/Athens did not return a usable Buddy source, and Solara's sampled playlist returned HTTP 403. These paths are not advertised as working menu options. No response restriction was bypassed. See [client setup](SITE-CLIENTS.md).
