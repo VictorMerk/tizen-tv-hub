@@ -51,7 +51,11 @@ with sync_playwright() as p:
         route.fulfill(content_type='application/json',headers={'Access-Control-Allow-Origin':'http://night.test','Access-Control-Allow-Credentials':'true'},body=json.dumps(data))
     page.route('https://movienig.ht/api/**',api)
     page.route('https://embed.vidrift.in/embed/**',lambda r:r.fulfill(body='<script>var embedMeta = {"playbackToken":"public-fixture"};</script>',headers={'Access-Control-Allow-Origin':'*'}))
-    page.route('https://embed.vidrift.in/api/source/**',lambda r:r.fulfill(content_type='application/json',headers={'Access-Control-Allow-Origin':'*'},body=json.dumps({'streams':[{'type':'hls','url':'https://media.test/master.m3u8'}]})))
+    source_requests=[]
+    def vidrift_source(route):
+        source_requests.append(parse_qs(urlparse(route.request.url).query))
+        route.fulfill(content_type='application/json',headers={'Access-Control-Allow-Origin':'*'},body=json.dumps({'provider':'atlas','streams':[{'type':'hls','url':'https://media.test/master.m3u8'}]}))
+    page.route('https://embed.vidrift.in/api/source/**',vidrift_source)
     page.route('https://media.test/**',lambda r:r.fulfill(headers={'Access-Control-Allow-Origin':'*'},body='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=2628000,RESOLUTION=1280x720\n720.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=5692000,RESOLUTION=1920x1080\n1080.m3u8\n'))
     def artwork(route):
         index=next((i for i,x in enumerate(fixture) if '/demo-'+str(i)+'.jpg' in route.request.url),0)
@@ -70,15 +74,21 @@ with sync_playwright() as p:
     page.wait_for_function('() => NightPlayer.state().state==="PLAYING"')
     page.wait_for_function('() => NightPlayer.state().variants.length===2')
     assert page.evaluate('NightPlayer.state().engine')=='browser'
+    assert page.evaluate('NightPlayer.state().quality')==1080
+    assert source_requests[0]['provider']==['atlas'] and source_requests[0]['hevc']==['0']
     page.keyboard.press('Enter');assert page.evaluate('NightPlayer.state().state')=='PAUSED'
     page.keyboard.press('Enter');assert page.evaluate('NightPlayer.state().state')=='PLAYING'
     page.locator('#play-actions button').nth(4).click();assert page.get_by_role('button',name=re.compile('^1080p')).count()==1
     page.get_by_role('button',name=re.compile('^1080p')).click();page.wait_for_function('() => NightPlayer.state().state==="PLAYING"')
     assert page.evaluate('NightPlayer.state().quality')==1080
     assert '5692000' in page.evaluate('__av.lock')
+    page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^720p')).click()
+    page.wait_for_function('() => NightPlayer.state().prepared && NightPlayer.state().quality===720')
     page.locator('#play-actions button').nth(3).click();page.get_by_role('button',name=re.compile('^Salem')).click()
     page.wait_for_function('() => NightPlayer.state().server==="salem" && NightPlayer.state().prepared')
     assert page.evaluate('NightPlayer.state().engine')=='native'
+    assert page.evaluate('NightPlayer.state().quality')==720
+    assert '2628000' in page.evaluate('__av.lock'),'Changing provider reset the requested resolution'
     page.locator('#play-actions button').nth(5).click();page.get_by_role('button',name=re.compile('^de')).click();assert page.evaluate('__av.audio')==2
     page.evaluate('__av.listener.onerror("native-format-error")')
     page.wait_for_function('() => NightPlayer.state().engine==="browser" && NightPlayer.state().prepared')
@@ -92,6 +102,7 @@ with sync_playwright() as p:
     page.evaluate('NightUI.details('+json.dumps(series)+')');page.wait_for_selector('#detail-play:not([disabled])');page.locator('#detail-play').click()
     page.get_by_text('Staffel 1',exact=True).click();page.get_by_text('Folge 1 · Pilot',exact=True).click()
     page.wait_for_function('() => NightPlayer.state().prepared');assert page.evaluate('NightPlayer.state().episode.episode')==1
+    assert page.evaluate('NightPlayer.state().quality')==720,'Opening another title reset the preference'
     page.evaluate('__av.listener.onstreamcompleted()');page.wait_for_function('() => NightPlayer.state().episode.episode===2 && NightPlayer.state().prepared')
     page.evaluate("NightPlayer.close();NightUI.browse('movie')")
     page.wait_for_function('() => !NightUI.state().loading')
@@ -106,6 +117,16 @@ with sync_playwright() as p:
     page.locator('[data-nav=series]').click();page.wait_for_function('() => NightUI.state().view==="series" && !NightUI.state().loading')
     page.locator('[data-page=next]').click();page.wait_for_function('() => NightUI.state().page===2 && !NightUI.state().loading')
     assert 'page 2' in page.locator('.poster').first.inner_text()
+    page.reload();page.wait_for_selector('.poster')
+    page.evaluate('NightUI.details('+json.dumps(fixture[0])+')');page.wait_for_selector('#detail-play:not([disabled])');page.locator('#detail-play').click()
+    page.wait_for_function('() => NightPlayer.state().prepared')
+    assert page.evaluate('NightPlayer.state().quality')==720,'App reload lost the quality preference'
+    page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^Automatisch')).click()
+    page.wait_for_function('() => NightPlayer.state().prepared && NightPlayer.state().quality==="auto"')
+    page.evaluate('NightPlayer.close();NightUI.details('+json.dumps(fixture[1])+')');page.wait_for_selector('#detail-play:not([disabled])');page.locator('#detail-play').click()
+    page.wait_for_function('() => NightPlayer.state().prepared')
+    assert page.evaluate('NightPlayer.state().quality')=='auto','Auto preference was not retained'
+    page.evaluate('NightPlayer.close()')
     assert not errors,errors
     browser.close()
 print('PASS: remote grid/detail/back focus; native play/pause; real quality options and bitrate lock; source/audio selection; late callback cancellation; series and auto-next; paged movies/series and page restoration')

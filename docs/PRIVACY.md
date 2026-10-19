@@ -12,7 +12,7 @@ requests go to the returned hosts; these services can see the TV's network addre
 requested title. There is no project-operated proxy or analytics service.
 
 Successful public catalogue responses are cached for 30 minutes with bounded storage.
-Resume positions, episode numbers and selected provider IDs are kept for up to 30 titles.
+Resume positions, episode numbers and selected provider IDs are kept for up to 30 titles. A global quality preference is also stored locally. Recent media-segment byte/duration totals are held in memory to estimate the stream data rate; media payloads are not retained by that feature.
 Stream URLs and playback tokens stay in memory and are not written to the resume cache.
 Runtime diagnostics are bounded and stay in the app's memory. No telemetry is uploaded
 to the repository owner. Upstream services have their own policies and availability.

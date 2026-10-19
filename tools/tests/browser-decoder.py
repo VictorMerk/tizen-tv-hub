@@ -10,7 +10,7 @@ with sync_playwright() as p:
  page.add_script_tag(content="""
  window.NightService={log:function(){}};window.instances=[];window.readyCount=0;window.failCount=0;
  window.Hls=function(){this.events={};this.levels=[{bitrate:3000000,height:720,width:1280},{bitrate:5000000,height:1080,width:1920}];this.audioTracks=[{lang:'en'},{lang:'de'}];instances.push(this)};
- Hls.isSupported=function(){return true};Hls.Events={BUFFER_CODECS:'codecs',MANIFEST_PARSED:'manifest',ERROR:'error'};
+ Hls.isSupported=function(){return true};Hls.Events={BUFFER_CODECS:'codecs',MANIFEST_PARSED:'manifest',ERROR:'error',FRAG_LOADED:'fragment'};
  Hls.prototype.on=function(k,f){this.events[k]=f};Hls.prototype.loadSource=function(){};Hls.prototype.attachMedia=function(){};Hls.prototype.destroy=function(){this.destroyed=true};
  """)
  page.add_script_tag(content=(root/'cinema/tv-browser-player.js').read_text(encoding='utf-8'))
@@ -25,6 +25,10 @@ with sync_playwright() as p:
  page.evaluate('decoder.setQualityHeight(1080)')
  assert page.evaluate('instances[1].currentLevel')==1
  assert page.evaluate('decoder.getPlaybackInfo().variants.map(v=>v.height)')==[720,1080]
+ page.evaluate("instances[1].events.fragment(null,{frag:{type:'main',duration:4},payload:{byteLength:1000000}})")
+ assert page.evaluate('decoder.getPlaybackInfo().measuredBitrate')==2000000
+ page.evaluate('instances[1].levels=[{height:360,bitrate:800000},{height:800,bitrate:5000000}];decoder.setQualityHeight(720)')
+ assert page.evaluate('instances[1].currentLevel')==0,'Unavailable preference selected a higher rendition'
  assert page.evaluate('decoder.getTotalTrackInfo().filter(t=>t.type==="AUDIO").length')==2
  page.evaluate('decoder.close()');assert page.locator('video').count()==0
  assert not errors,errors

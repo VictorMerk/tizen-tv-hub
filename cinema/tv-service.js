@@ -16,7 +16,7 @@
         },function(e){clearTimeout(timer);throw e;});
     }
     function source(meta,episode,server,onTrying){
-        if(server==='vidrift')return vidrift(meta,episode);
+        if(server==='vidrift'||server==='vidrift-auto')return vidrift(meta,episode,server==='vidrift'?'atlas':null);
         var type=meta.type==='series'?'tv':'movie';
         var path='/api/stream/v1/'+type+'/'+encodeURIComponent(meta.tmdbId)+(type==='tv'?'/'+episode.season+'/'+episode.episode:'');
         var q=new URLSearchParams({title:meta.name,imdbId:meta.id,year:meta.year||'',server:server,only:'1',fresh:'1'});
@@ -32,15 +32,15 @@
         });
         return {promise:promise,cancel:function(){if(settled)return;settled=true;clearTimeout(timer);if(stream)stream.close();rejectRequest(Error('cancelled'));}};
     }
-    function vidrift(meta,episode){
+    function vidrift(meta,episode,provider){
         var origin='https://embed.vidrift.in',path=meta.type==='series'?'tv/'+meta.tmdbId+'/'+episode.season+'/'+episode.episode:'movie/'+meta.tmdbId;
         var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},35000);
         function get(url){return fetch(url,{signal:controller.signal}).then(function(r){if(!r.ok)throw Error('VidRift HTTP '+r.status);return r.text();});}
         var promise=get(origin+'/embed/'+path).then(function(text){
             var match=/var embedMeta = (\{.*?\});<\/script>/.exec(text);if(!match)throw Error('VidRift liefert keine Playerdaten');var data=JSON.parse(match[1]);
             if(data.unreleased)throw Error('Titel auf VidRift noch nicht verfuegbar');if(!data.playbackToken)throw Error('VidRift hat keinen Playback-Token ausgegeben');
-            return get(origin+'/api/source/'+path+'?token='+encodeURIComponent(data.playbackToken));
-        }).then(function(text){var data=JSON.parse(text),list=[];(data.streams||[]).forEach(function(s){var first=s.url||s.proxyUrl;if(first)list.push({url:new URL(first,origin).href,type:s.type||'hls',quality:s.quality||'auto'});if(s.proxyUrl&&s.proxyUrl!==first)list.push({url:new URL(s.proxyUrl,origin).href,type:s.type||'hls',quality:s.quality||'auto'});});if(!list.length)throw Error('VidRift hat keine Quelle gefunden');clearTimeout(timer);return {server:'vidrift',sources:list};},function(e){clearTimeout(timer);throw e;});
+            return get(origin+'/api/source/'+path+'?token='+encodeURIComponent(data.playbackToken)+(provider?'&provider='+encodeURIComponent(provider)+'&hevc=0':''));
+        }).then(function(text){var data=JSON.parse(text),list=[];(data.streams||[]).forEach(function(s,i){var first=s.url||s.proxyUrl,label=s.name||s.label||'Datei '+(i+1);if(first)list.push({url:new URL(first,origin).href,type:s.type||'hls',quality:s.quality||'auto',label:label});if(s.proxyUrl&&s.proxyUrl!==first)list.push({url:new URL(s.proxyUrl,origin).href,type:s.type||'hls',quality:s.quality||'auto',label:label+' / Alternativ'});});if(!list.length)throw Error('VidRift hat keine Quelle gefunden');clearTimeout(timer);return {server:'vidrift',provider:data.provider||provider||'',sources:list};},function(e){clearTimeout(timer);throw e;});
         return {promise:promise,cancel:function(){clearTimeout(timer);controller.abort();}};
     }
     function playlist(url,signal){return fetch(url,{signal:signal}).then(function(r){if(!r.ok)throw Error('Playlist HTTP '+r.status);if(!r.body)return r.text();var reader=r.body.getReader(),decoder=new TextDecoder(),text='',bytes=0;function read(){return reader.read().then(function(chunk){if(chunk.done)return text+decoder.decode();bytes+=chunk.value.length;if(bytes>500000){reader.cancel();throw Error('Keine gueltige Playlist');}text+=decoder.decode(chunk.value,{stream:true});return read();});}return read();}).then(function(text){
@@ -49,5 +49,6 @@
         lines.forEach(function(line,i){if(line.indexOf('#EXT-X-STREAM-INF:')!==0)return;var resolution=/RESOLUTION=(\d+)x(\d+)/i.exec(line),bandwidth=/BANDWIDTH=(\d+)/.exec(line);var next=lines[i+1];if(next&&next.charAt(0)!=='#')variants.push({height:resolution?Number(resolution[2]):0,width:resolution?Number(resolution[1]):0,bitrate:bandwidth?Number(bandwidth[1]):0,url:new URL(next,url).href});});
         return variants;
     });}
-    window.NightService={json:json,source:source,playlist:playlist,log:log,servers:function(){if(servers)return Promise.resolve(servers);return json('/api/servers').then(function(r){servers=[{id:'vidrift',label:'VidRift'}].concat(r.servers||[]);return servers;},function(){servers=[{id:'vidrift',label:'VidRift'},{id:'salem',label:'Salem'},{id:'tucson',label:'Tucson'}];return servers;});}};
+    function vidriftServers(){return [{id:'vidrift',label:'VidRift / HD bevorzugt'},{id:'vidrift-auto',label:'VidRift / Alternativ'}];}
+    window.NightService={json:json,source:source,playlist:playlist,log:log,servers:function(){if(servers)return Promise.resolve(servers);return json('/api/servers').then(function(r){servers=vidriftServers().concat(r.servers||[]);return servers;},function(){servers=vidriftServers().concat([{id:'salem',label:'Salem'},{id:'tucson',label:'Tucson'}]);return servers;});}};
 })();

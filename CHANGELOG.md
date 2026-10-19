@@ -1,5 +1,13 @@
 # Changelog
 
+## Movie Night TV 0.5 / TVStart 2.2
+
+- Prefer the normal VidRift Atlas H.264 source path; retain the old provider path as an explicit alternative.
+- Default to a retained 1080p preference; retain manual/Auto selection across sources, films and reloads.
+- Show actual decoded resolution separately from the preference and expose approximate measured bitrate where available.
+- Distinct blue TVStart and gold Movie Night icons, with editable SVG sources and a renderer.
+- Cover provider parameters, preference persistence, lower-available rendition selection and bitrate measurement with fixture tests.
+
 ## Movie Night TV 0.4 / initial public release
 
 - Paged movie and series catalogues and an interleaved Discover view, up to 40 unique

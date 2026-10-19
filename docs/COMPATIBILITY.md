@@ -4,7 +4,7 @@
 
 - Samsung Q60T (2020), model family GQ65Q60TGUXZG.
 - Tizen 5.5, Chromium 69, firmware 2743.0.
-- Public release baseline: Movie Night TV 0.4 and TVStart 2.1.
+- Public release baseline: Movie Night TV 0.5 and TVStart 2.2.
 
 Samsung documents its engine versions in [Web Engine Specifications](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html).
 The manifest requires Tizen 5.5. Newer models may work but have not been physically
@@ -51,3 +51,11 @@ page restoration, source/audio/quality menus, bitrate selection, decoder fallbac
 late callback cancellation, episode progression and local launcher assets.
 Browser decoder lifecycle tests also ignore events from a removed video element.
 None of these mocks substitutes for model-specific physical audiovisual verification.
+
+## Quality investigation, 19 October 2026
+
+For Spider-Man: Brand New Day, the previous provider returned separate 2592x1080, 1728x720 and 1152x480 files. The 1080-height file produced a browser media error; the app then played the lower file. The normal Atlas option decoded 1920x800 from a declared 1080p rendition without that error. Buddy decoded 1920x1080 on Atlas. The user initially described Buddy as blurry/blocky, then confirmed that the latest Buddy preview looked good. The user identified the currently tested Spider-Man source as a phone/cinema recording despite its HD frame dimensions. These are sample-specific observations, not proof of a clean master for every title.
+
+A sampled Atlas Buddy stream advertised 5 Mbit/s while recent segment payloads measured roughly 3 Mbit/s; the measurement varies by scene. An alternative Tucson rendition also failed on this TV, and the original HEVC provider was not established as a usable direct source. No general claim of sharper pictures or 4K support follows from these tests.
+
+Current Cinejoy client code contains nullish-coalescing syntax. A required 96-byte Svelte bootstrap fragment failed to compile on this TV with `Unexpected token ?`. No Cinejoy playback or cleaner-copy claim is made. Movy's catalogue lists Buddy in a 4K section, but playback/quality were not verified on the TV. See [source comparison](SOURCES.md).

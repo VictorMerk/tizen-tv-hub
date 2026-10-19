@@ -3,6 +3,8 @@
 A quieter, remote-first home screen and movie interface for Samsung Tizen TVs.
 Built and physically tested on a **2020 Samsung Q60T, Tizen 5.5 / Chromium 69**.
 
+<img src="launcher/icon.png" width="96" alt="TVStart home-screen icon"> <img src="cinema/icon.png" width="96" alt="Movie Night cinema icon">
+
 ![TVStart app selector](docs/images/launcher.png)
 
 **Two optional apps, installed directly on the TV:**
@@ -62,14 +64,16 @@ reports up to 500 pages. Only one page's tiles are rendered at a time.
 
 ## Picture quality
 
+The default preference is **1080p**, retained across films, provider changes and app restarts. If a source lacks it, playback uses an available rendition; the overlay reports the actual decoded picture separately from the requested quality. Choose **Automatisch** to allow adaptive quality when a connection buffers.
+
 The player lists **resolutions actually supplied by the source**. Auto is adaptive
 quality when a source has multiple variants; it cannot create a missing 1080p or 4K
 stream. The menu reports current picture dimensions and offers **Andere Quelle
 vergleichen** when another source may look better. A 1920×1080 frame can still look
-soft because of compression, mastering or upscaling in the supplied video.
+soft because of compression, mastering or upscaling in the supplied video. The quality panel separates the advertised bitrate from an approximate measured segment rate when available. Neither is a visual-quality score.
 
 Samsung AVPlay and a simple browser video surface with local HLS.js provide two
-playback paths. VidRift uses the browser path by default; native preparation failures
+playback paths. VidRift HD uses the normal Atlas provider option with H.264; VidRift Alternativ retains the previous automatic provider path. Both use the browser decoder. Native preparation failures
 can fall back to the browser. Provider and decoder fallback are bounded and cancellable.
 
 ## What this changes—and its limits
@@ -115,3 +119,5 @@ Original project code is [MIT-licensed](LICENSE). HLS.js is Apache-2.0; its copy
 notice and license are retained. See [third-party notices](THIRD_PARTY_NOTICES.md).
 This is an independent community project, not affiliated with Samsung, Apple, Netflix,
 Amazon or the catalogue/source services. No movies or service credentials are included.
+
+App icon artwork is original SVG, with checked-in PNGs for Tizen. To regenerate after editing `launcher/icon.svg` or `cinema/icon.svg`, run `python scripts/render-icons.py`.
