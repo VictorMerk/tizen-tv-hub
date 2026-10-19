@@ -2,7 +2,10 @@
 
 Movie Night TV 0.6 adds **Movy / Dallas** and **Cinejoy / Nebula** under the player's
 source menu. They reuse the existing catalogue, remote controls, episode picker and
-player. They do not install a modern browser or mirror a PC browser.
+player. Cinejoy's Nebula, Lisbon, Solara and Athens providers are accessible in a
+separate source submenu; availability varies by title. They do not install a modern
+browser or mirror a PC browser. Version 0.7 adds a [TV-local native converter](NATIVE-CONVERTER.md)
+for supported Cinejoy streams, retaining the browser decoder as a fallback.
 
 ## Prepare before packaging
 

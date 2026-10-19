@@ -1,5 +1,13 @@
 # Changelog
 
+## Movie Night TV 0.7
+
+- Add a TV-local lossless AVC/AAC fMP4-to-MPEG-TS converter for Cinejoy, feeding Samsung's native decoder through a loopback-only server. No PC is required.
+- Recover Inception's 2592x1080 rendition; verify Buddy, Breaking Bad S1E1 and Spider-Man (2002) at native HD dimensions.
+- Retain seeking, pause/resume and manual quality changes, and replace the native bitrate placeholder with playlist/measured data.
+- Group Cinejoy's four providers in their own submenu. Keep the long list of additional providers under Weitere Quellen, with per-playback failure/retry hints.
+- Add synthetic media and HTTP protocol regression tests. Document supported formats, limits, privacy and physical results.
+
 ## Movie Night TV 0.6.1
 
 - Correct the matched 1920-wide AVC / 481:480 pixel-aspect MP4 metadata that made Chromium 69 report a 1924-wide picture and reject Buddy's higher Cinejoy rendition. Encoded video and audio samples are unchanged.

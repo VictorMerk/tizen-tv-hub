@@ -71,7 +71,7 @@ Both clients were packaged locally and checked after installation. Native fetch 
 | --- | --- | --- |
 | Buddy | Movy / Dallas | Native player reported 1280x692. User confirmed picture and sound, but wanted 1080p. The sampled playlist only advertised that 720p-class rendition. |
 | Buddy | Cinejoy / Nebula | Version 0.6 initially fell back from 1924x1040 to 1280x692. The 0.6.1 display-metadata correction recovered the higher rendition at 1920x1040. User confirmed a sharper picture and working sound. |
-| Inception | Cinejoy / Nebula | Higher rendition failed; retry played at reported 1728x720. |
+| Inception | Cinejoy / Nebula | Before 0.7, higher rendition failed and retried at 1728x720. Version 0.7's native converter played 2592x1080; user confirmed picture and sound. |
 | Inception | Movy / Dallas | Missing-resolution selection fix increased reported playback from 640x266 (0.24 Mbit/s) to 1280x534 (1.01 Mbit/s). |
 | Breaking Bad S1E1 | Cinejoy / Nebula | Fresh installed-package playback advanced at reported 1920x1080. This establishes that this service is not universally limited to 720p on the TV. |
 | Breaking Bad S1E1 | Movy / Dallas | Playlist omitted resolution labels. Before the selection fix it played 640x360; selecting the higher 3.5 Mbit/s rung played 1280x720. |
@@ -86,4 +86,10 @@ Chromium 69 at about 5.7 Mbit/s declared bitrate. The encoded samples remain
 unchanged. This is a demonstrated fix for this file's playback failure, not a
 general new browser engine or a guarantee for every title.
 
-Other sampled Movy providers returned HTTP 403/404 or server errors on this packaged TV app. Cinejoy Lisbon/Athens did not return a usable Buddy source, and Solara's sampled playlist returned HTTP 403. These paths are not advertised as working menu options. No response restriction was bypassed. See [client setup](SITE-CLIENTS.md).
+Other sampled Movy providers returned HTTP 403/404 or server errors on this packaged TV app. Cinejoy Lisbon/Athens did not return a usable Buddy source, and Solara's sampled playlist returned HTTP 403. Version 0.7 makes all four Cinejoy providers reachable as manual choices, without claiming they all work. An Inception retest found Lisbon advertising 1080p/4K; the sampled 1080p resource returned HTTP 502 and native 4K startup returned a connection failure. Solara still returned HTTP 403 and Athens no mirror for both films. No response restriction was bypassed. See [client setup](SITE-CLIENTS.md).
+
+Version 0.7 supersedes the earlier failed native delivery experiments for supported
+AVC/AAC fMP4: repackaging those elementary samples as MPEG-TS entirely on the TV
+recovered Inception at 2592x1080 and also played the three other HD samples listed
+in [the converter verification](NATIVE-CONVERTER.md). Its user confirmation applies
+to Inception in the normal player. These results do not certify 4K playback.

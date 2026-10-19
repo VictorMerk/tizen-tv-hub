@@ -15,7 +15,7 @@ $stageRoot = Join-Path $root ('.build-stage\' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $outputRoot,$stageRoot | Out-Null
 $projects = @(
     @{Name='launcher'; Package='TVStart.wgt'; Files=@('start.html','config.xml','icon.png','launcher.css','launcher.js','apps.js')},
-    @{Name='cinema'; Package='MovieNightTV.wgt'; Files=@('index.html','config.xml','icon.png','tv-sites.js','site-clients','tv-service.js','tv-ui.js','tv-player.js','tv-browser-player.js','tv-ui.css','hls.min.js','HLS-LICENSE')}
+    @{Name='cinema'; Package='MovieNightTV.wgt'; Files=@('index.html','config.xml','icon.png','tv-sites.js','site-clients','tv-service.js','tv-ui.js','tv-player.js','tv-browser-player.js','tv-remux.js','tv-remux-worker.js','tv-ts-mux.js','mp4box.min.js','MP4BOX-LICENSE','tv-ui.css','hls.min.js','HLS-LICENSE')}
 )
 foreach ($project in $projects) {
     if ($Target -ne 'all' -and $Target -ne $project.Name) { continue }

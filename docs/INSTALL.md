@@ -78,6 +78,12 @@ Open TVStart and MovieNightTV from the TV's Apps screen. Add TVStart to Samsung 
 and move it near the left. TVStart opens installed streaming services without changing
 their account data. Hold OK over Movie Night in Alle Apps to pin it if necessary.
 
+In Movie Night, choose **Quelle → Cinejoy** to see Nebula, Lisbon, Solara and Athens.
+Nebula is the physically verified HD path described in [the converter checks](NATIVE-CONVERTER.md).
+The other providers vary by title. Additional legacy providers are under **Weitere
+Quellen**. The quality menu reports the actual decoded picture separately from the
+requested resolution; an offered rendition can still fail on a particular TV.
+
 For last-app startup on the tested Q60T, look under **Einstellungen → Allgemein →
 Smart-Funktionen**: enable **Letzte App automatisch ausführen** and, if offered,
 disable **Smart Hub automatisch starten**. Return to TVStart before turning the TV off.

@@ -31,7 +31,7 @@ that a particular film has a cleaner copy on a particular TV.
 | Candidate | What was established |
 | --- | --- |
 | [Movy](https://www.movy.sx/de) | Dallas adapter plays sampled titles on the TV. Buddy's sampled file is 720p-class. Its catalogue 4K label is not a verified TV playback capability. |
-| [Cinejoy](https://cinejoy.pk/) | Unmodified website needs newer JavaScript. Converted client and WASM run locally. Version 0.6.1 corrects Buddy's matched display-metadata issue: Nebula played its higher rendition at 1920x1040, with sharper picture and sound confirmed by the user. Breaking Bad S1E1 also played at reported 1080p. |
+| [Cinejoy](https://cinejoy.pk/) | Converted client and WASM run locally. Version 0.7 adds a TV-local native converter; Nebula played Inception at 2592x1080, Buddy at 1920x1040, and Breaking Bad S1E1 / Spider-Man (2002) at 1920x1080. All four provider choices are reachable; their actual streams remain title-dependent. See the [converter checks](NATIVE-CONVERTER.md). |
 | Original VidRift HEVC option | Listed by its ordinary frontend; no reliable direct playback improvement was established in the investigation. |
 | Other entries in the supplied list | No complete, current playback/visual-quality verification. They are not bundled as working providers. |
 

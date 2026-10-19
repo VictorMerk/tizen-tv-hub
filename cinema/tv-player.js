@@ -4,12 +4,12 @@
     var layer=null,buttons=[],buttonIndex=0,prepared=false,variants=[],quality='auto',audio=[],audioIndex=0,url='',position=0,error=null,attempts=[],serverList=[],attempted=[],sourceIndex=0,sources=[],fileChoices=[],qualityRetries=[],qualityFailures=[];
     var sourceName='',serverId='',startAt=0,wasPaused=false,qualityController=null,lastTick=0,stillSince=0,historyTimer=0;
     try{api=webapis.avplay;}catch(ignore){}
-    var nativeApi=api,browserApi=null,engine='native',browserTried=false,currentSource=null,pictureCache=null,pictureAt=0;
+    var nativeApi=api,browserApi=null,engine='native',browserTried=false,currentSource=null,pictureCache=null,pictureAt=0,remuxInfo=null;
     function preferredQuality(){try{var value=JSON.parse(localStorage.getItem('night.quality.v1'));if(value==='auto'||[360,480,720,1080,1440,2160].indexOf(value)>=0)return value;}catch(ignore){}return 1080;}
     function saveQuality(value){try{localStorage.setItem('night.quality.v1',JSON.stringify(value));}catch(ignore){}}
     function pictureInfo(){
         if(!prepared)return null;if(pictureCache&&Date.now()-pictureAt<1000)return pictureCache;
-        try{if(api.getPlaybackInfo)pictureCache=api.getPlaybackInfo();else{var video=api.getTotalTrackInfo().filter(function(t){return t.type==='VIDEO';})[0],extra=video&&JSON.parse(video.extra_info||'{}');pictureCache=extra?{width:Number(extra.Width)||0,height:Number(extra.Height)||0,bitrate:Number(extra.Bit_rate)||0,variants:[]}:null;}pictureAt=Date.now();}catch(ignore){}return pictureCache;
+        try{if(api.getPlaybackInfo)pictureCache=api.getPlaybackInfo();else{var video=api.getTotalTrackInfo().filter(function(t){return t.type==='VIDEO';})[0],extra=video&&JSON.parse(video.extra_info||'{}');pictureCache=extra?{width:Number(extra.Width)||0,height:Number(extra.Height)||0,bitrate:Number(extra.Bit_rate)||0,variants:[]}:null;}if(engine==='remux'&&pictureCache&&remuxInfo){pictureCache.bitrate=remuxInfo.bitrate||0;pictureCache.measuredBitrate=NightRemux.info().measuredBitrate||0;}pictureAt=Date.now();}catch(ignore){}return pictureCache;
     }
     function pictureTier(p){if(!p||!p.height)return 0;return p.height>=2160||p.width>=3800?2160:p.height>=1440?1440:p.height>=1080||p.width>=1900?1080:p.height>=720||p.width>=1200?720:p.height>=480||p.width>=800?480:p.height;}
     function selectEngine(name){
@@ -22,7 +22,7 @@
     function duration(){try{return prepared?api.getDuration()/1000:0;}catch(ignore){return 0;}}
     function status(text){if(layer)layer.querySelector('#play-status').textContent=text||'';}
     function clock(t){t=Math.max(0,Math.floor(t||0));return Math.floor(t/3600)+':'+('0'+Math.floor(t/60)%60).slice(-2)+':'+('0'+t%60).slice(-2);}
-    function stopHardware(){try{api.stop();}catch(ignore){}try{api.close();}catch(ignore){}prepared=false;pictureCache=null;pictureAt=0;}
+    function stopHardware(){try{api.stop();}catch(ignore){}try{api.close();}catch(ignore){}if(window.NightRemux)NightRemux.close();remuxInfo=null;prepared=false;pictureCache=null;pictureAt=0;}
     function cancel(){token++;clearTimeout(deadline);clearTimeout(seekTimer);if(request){request.cancel();request=null;}if(qualityController){qualityController.abort();qualityController=null;}held=false;}
     function persist(){if(session&&position>5)NightUI.saveProgress(session.meta,session.episode,position,duration(),serverId);}
     function close(){persist();cancel();clearInterval(poll);clearTimeout(hideTimer);stopHardware();if(layer)layer.remove();layer=null;session=null;error=null;document.documentElement.style.background='';document.body.style.background='';NightUI.playerClosed();}
@@ -58,7 +58,7 @@
     function fail(message){
         var failedHeight=quality==='auto'?Math.max.apply(Math,variants.map(function(v){return v.height;})):Number(quality);
         cancel();error=message;prepared=false;stopHardware();
-        if(session&&currentSource&&engine==='native'&&!browserTried){browserTried=true;selectEngine('browser');NightService.log('decoder-fallback',{title:session.meta.name,server:serverId});prepare(currentSource,position,quality);return;}
+        if(session&&currentSource&&(engine==='native'||engine==='remux')&&!browserTried){browserTried=true;selectEngine('browser');NightService.log('decoder-fallback',{title:session.meta.name,server:serverId});prepare(currentSource,position,quality);return;}
         var lower=currentSource&&engine==='browser'&&variants.filter(function(v){return !v.file&&v.height&&v.height<failedHeight&&qualityRetries.indexOf(v.height)<0;}).sort(function(a,b){return b.height-a.height;})[0];
         if(lower&&qualityRetries.length<2){qualityFailures.push(failedHeight);qualityRetries.push(lower.height);NightService.log('resolution-fallback',{server:serverId,from:failedHeight,to:lower.height});prepare(currentSource,position,lower.height);return;}
         var attemptInfo=attempts[attempts.length-1];if(attemptInfo){attemptInfo.status='failed';attemptInfo.error=message;}
@@ -73,12 +73,15 @@
         status('Video wird vorbereitet ...');show();var began=Date.now();
         if(attempts.length)attempts[attempts.length-1].status='preparing';
         clearTimeout(deadline);deadline=setTimeout(function(){if(run===token){cancel();fail('Diese Quelle reagiert nicht auf den TV.');}},18000);
-        try{
-            api.open(url);api.setDisplayRect(0,0,1920,1080);api.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
+        function openMedia(openUrl){try{
+            if(run!==token)return;api.open(openUrl);api.setDisplayRect(0,0,1920,1080);api.setDisplayMethod('PLAYER_DISPLAY_MODE_LETTER_BOX');
             try{api.setStreamingProperty('USER_AGENT',navigator.userAgent);}catch(ignore){}
             try{api.setSilent(false);}catch(ignore){}
             if(api.setQualityHeight)api.setQualityHeight(quality==='auto'?0:quality);
-            if(quality!=='auto'){
+            if(engine==='remux'){
+                try{api.setStreamingProperty('SET_MODE_4K','TRUE');}catch(ignore){}
+                api.setStreamingProperty('ADAPTIVE_INFO','FIXED_MAX_RESOLUTION=3840X2160');
+            }else if(quality!=='auto'){
                 var known=variants.filter(function(v){return v.height;}),chosen=known.filter(function(v){return v.height<=Number(quality);}).sort(function(a,b){return b.height-a.height;})[0]||known.slice().sort(function(a,b){return a.height-b.height;})[0];
                 if(!chosen)chosen=variants.slice().sort(function(a,b){return b.bitrate-a.bitrate;})[0];
                 if(chosen&&chosen.bitrate)api.setStreamingProperty('ADAPTIVE_INFO','BITRATES='+chosen.bitrate+'~'+chosen.bitrate+'|STARTBITRATE='+chosen.bitrate);
@@ -92,7 +95,9 @@
                 setTimeout(function(){if(run!==token||!session)return;var checked=tracks();if(info&&checked){info.tracks=checked;info.picture=pictureInfo();}},4000);
                 status('');update();show();NightService.log('playing',{title:session.meta.name,server:serverId,prepareMs:Date.now()-began});
             },function(){if(run===token){cancel();fail('Quelle konnte nicht vorbereitet werden.');}});
-        }catch(e){if(run===token){cancel();fail('Quelle oder Qualität wird vom TV nicht unterstützt.');}}
+        }catch(e){if(run===token){cancel();fail('Quelle oder Qualität wird vom TV nicht unterstützt.');}}}
+        if(engine==='remux')NightRemux.open(url,quality==='auto'?1080:Number(quality)).then(function(info){if(run!==token)return;remuxInfo=info;openMedia(info.url);},function(){if(run===token){cancel();fail('TV-Konverter konnte diese Quelle nicht vorbereiten.');}});
+        else openMedia(url);
     }
     function attempt(id,resume){
         if(!session)return;persist();cancel();stopHardware();currentSource=null;error=null;position=resume||0;variants=[];sources=[];fileChoices=[];qualityRetries=[];qualityFailures=[];sourceIndex=0;quality=preferredQuality();serverId=id;
@@ -108,27 +113,36 @@
         },function(e){if(run!==token)return;request=null;fail(e.message||'Quelle nicht verf\u00fcgbar.');});
     }
     function useSource(source,resume){
-            var run=token;variants=[];currentSource=null;qualityRetries=[];browserTried=/^(vidrift|cinejoy)/.test(serverId);selectEngine(browserTried?'browser':'native');
+            var run=token;variants=[];currentSource=null;qualityRetries=[];var converter=/^cinejoy/.test(serverId)&&window.NightRemux&&typeof tizentvwasm!=='undefined'&&typeof Worker!=='undefined';browserTried=!converter&&/^(vidrift|cinejoy)/.test(serverId);selectEngine(converter?'remux':browserTried?'browser':'native');
             if(!/mp4/i.test(source.type||'')&&!/\.mp4(?:$|[?&%])/i.test(source.url)){
                 qualityController=new AbortController();var c=qualityController;var timer=setTimeout(function(){c.abort();},8000);
                 NightService.playlist(source.url,c.signal).then(function(v){clearTimeout(timer);if(run!==token)return;variants=v.length?v:fileChoices;prepare(source,resume,preferredQuality());},function(e){clearTimeout(timer);if(run===token){variants=fileChoices;NightService.log('playlist-check',String(e));prepare(source,resume,preferredQuality());}});
             }else{variants=fileChoices;prepare(source,resume,preferredQuality());}
     }
     function chooseFile(value){var target=value==='auto'?1080:Number(value);return fileChoices.filter(function(v){return v.height<=target;}).sort(function(a,b){return b.height-a.height;})[0]||fileChoices.slice().sort(function(a,b){return a.height-b.height;})[0];}
-    function sourceMenu(){
-        show();NightUI.dialog('Quelle auswählen','Eine Quelle wird direkt getestet. Bei Fehlern probiert Automatik bis zu drei Anbieter.',serverList.map(function(s){var prior=attempts.filter(function(a){return a.server===s.id;}).pop();return {label:s.label+(s.id===serverId?' · Ausgewaehlt':''),hint:prior?(prior.status==='playing'?'Auf diesem TV gestartet':prior.status==='failed'?'Letzter Versuch fehlgeschlagen':'Wird getestet'):'Noch nicht getestet',action:function(){attempted=[];wasPaused=false;attempt(s.id,position);}};}));
+    function sourceMenu(group){
+        show();
+        function row(s){var prior=attempts.filter(function(a){return a.server===s.id;}).pop();return {label:s.label+(s.id===serverId?' · Ausgewaehlt':''),hint:prior?(prior.status==='playing'?'Auf diesem TV gestartet':prior.status==='failed'?'Letzter Versuch fehlgeschlagen · Erneut pruefen':'Wird getestet'):'Fuer diesen Film noch nicht getestet',action:function(){attempted=[];wasPaused=false;attempt(s.id,position);}};}
+        var cinejoy=serverList.filter(function(s){return /^cinejoy/.test(s.id);}),primary=serverList.filter(function(s){return ['movy-dallas','vidrift'].indexOf(s.id)>=0;}),other=serverList.filter(function(s){return !/^cinejoy/.test(s.id)&&['movy-dallas','vidrift'].indexOf(s.id)<0;});
+        if(group==='cinejoy'){NightUI.dialog('Cinejoy-Server','Server koennen je nach Film andere Kopien liefern oder nicht verfuegbar sein. Eine 4K-Angabe garantiert keine abspielbare 4K-Kopie.',cinejoy.map(row));return;}
+        if(group==='more'){NightUI.dialog('Weitere Quellen','Zusaetzliche Anbieter mit wechselnder Verfuegbarkeit. Fehlgeschlagene Quellen koennen hier erneut getestet werden.',other.map(row));return;}
+        var rows=[];if(cinejoy.length)rows.push({label:'Cinejoy · '+cinejoy.length+' Server'+(/^cinejoy/.test(serverId)?' · Ausgewaehlt':''),hint:/^cinejoy/.test(serverId)?sourceName:'Nebula, Lisbon, Solara und Athens',action:function(){sourceMenu('cinejoy');}});
+        rows=rows.concat(primary.map(row));var current=other.filter(function(s){return s.id===serverId;})[0];if(current)rows.push(row(current));
+        if(other.length)rows.push({label:'Weitere Quellen · '+other.length,hint:'Weitere Anbieter und alternative Server ausprobieren',action:function(){sourceMenu('more');}});
+        NightUI.dialog('Quelle auswählen','Waehle einen Dienst. Der aktive Server und die tatsaechliche Bildaufloesung stehen im Player.',rows);
     }
     function qualityMenu(){
         var detail='',picture=null;
         try{if(api.getPlaybackInfo){picture=api.getPlaybackInfo();if(picture.variants.length&&(fileChoices.length<2||picture.variants.length>1))variants=picture.variants;}else{var track=tracks().filter(function(t){return t.type==='VIDEO';})[0];var extra=track&&JSON.parse(track.extra_info||'{}');if(extra)picture={width:extra.Width,height:extra.Height,bitrate:extra.Bit_rate||0};}
+            if(engine==='remux')picture=pictureInfo();
             if(picture&&picture.width&&picture.height){var rate=picture.measuredBitrate||picture.bitrate;detail='Aktuelles Bild: '+picture.width+' x '+picture.height+(rate?' / '+(rate/1000000).toFixed(1)+' Mbit/s '+(picture.measuredBitrate?'ca. gemessen':'angegeben'):'')+'. ';}
         }catch(ignore){}
         if(qualityRetries.length)detail+='Decoder-Fallback auf eine niedrigere Stufe. Gespeicherter Wunsch: '+preferredQuality()+'. ';
-        var fixedFiles=variants.some(function(v){return v.file;}),rows=[{label:'Automatisch'+(quality==='auto'?' · Ausgewaehlt':''),hint:fixedFiles?'Standarddatei bis 1080p. Dieser Anbieter liefert feste Videodateien.':'Der TV passt die Bitrate an die Verbindung an.',action:function(){changeQuality('auto');}}],seen={};
+        var fixedFiles=variants.some(function(v){return v.file;}),rows=[{label:'Automatisch'+(quality==='auto'?' · Ausgewaehlt':''),hint:fixedFiles?'Standarddatei bis 1080p. Dieser Anbieter liefert feste Videodateien.':engine==='remux'?'Hoechste angebotene Stufe bis 1080p. Die Auswahl erfolgt beim Start.':'Der TV passt die Bitrate an die Verbindung an.',action:function(){changeQuality('auto');}}],seen={};
         variants.slice().sort(function(a,b){return b.height-a.height;}).forEach(function(v){var tier=pictureTier(v);if(!tier||seen[tier])return;seen[tier]=true;var failed=qualityFailures.indexOf(v.height)>=0;rows.push({label:tier+'p'+(failed?' · Erneut testen':Number(quality)===tier?' · Ausgewaehlt':''),hint:(failed?'Letzter Versuch auf diesem TV fehlgeschlagen. ':'')+(v.bitrate?(v.bitrate/1000000).toFixed(1)+' Mbit/s · ':'')+(v.file?'Separate Videodatei':'in dieser Quelle vorhanden'),action:function(){changeQuality(tier);}});});
         if(rows.length===1)rows.push({label:variants.length>1?'Streamstufen ohne Aufloesungsangabe':'Originalqualität'+(pictureTier(picture)?' / '+pictureTier(picture)+'p-Klasse':''),hint:variants.length>1?'Dieser Anbieter nennt nur Bitraten. Eine feste Aufloesung kann hier nicht zugesichert werden.':'Diese Datei bietet keine weiteren Auflösungen. Eine andere Quelle kann höher auflösen.',disabled:true});
         rows.push({label:'Andere Quelle vergleichen',hint:'Eine andere Quelle kann eine bessere Bildqualität anbieten.',action:sourceMenu});
-        NightUI.dialog('Bildqualität',detail+(quality==='auto'?'Automatische Anpassung. ':'Bevorzugt: '+quality+'p. ')+'Deine Auswahl gilt auch für weitere Filme und Quellen. Bei Pufferung Automatisch wählen.',rows);
+        NightUI.dialog('Bildqualität',detail+(quality==='auto'?(engine==='remux'?'Automatische Startauswahl bis 1080p. ':'Automatische Anpassung. '):'Bevorzugt: '+quality+'p. ')+'Deine Auswahl gilt auch für weitere Filme und Quellen. '+(engine==='remux'?'Bei Pufferung eine niedrigere Stufe waehlen.':'Bei Pufferung Automatisch wählen.'),rows);
     }
     function changeQuality(value){if(!url)return;saveQuality(value);var resume=now();wasPaused=state()==='PAUSED';qualityRetries=[];cancel();var file=variants.some(function(v){return v.file;})&&chooseFile(value);if(file){sourceIndex=sources.indexOf(file.source);useSource(file.source,resume);}else prepare({url:url},resume,value);}
     function audioMenu(){

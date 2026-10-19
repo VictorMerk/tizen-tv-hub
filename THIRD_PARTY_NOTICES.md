@@ -11,9 +11,19 @@ Licensed under Apache License 2.0. The upstream notice and full license are in
 `cinema/HLS-LICENSE`; the full text is also in `third-party/Apache-2.0.txt`.
 HLS.js is loaded locally only when the browser playback path needs it.
 
+## MP4Box.js 0.5.4
+
+`cinema/mp4box.min.js` is the unmodified distribution of
+[`mp4box` 0.5.4](https://www.npmjs.com/package/mp4box/v/0.5.4), downloaded from its
+pinned npm distribution via jsDelivr. Upstream: [GPAC/mp4box.js](https://github.com/gpac/mp4box.js).
+Copyright (c) 2012 Telecom ParisTech/TSI/MM/GPAC Cyril Concolato.
+The BSD license and notice are included in `cinema/MP4BOX-LICENSE`.
+It loads locally inside the native converter worker. Distribution and license
+hashes are checked by `third-party/integrity.json`.
+
 ## Platform APIs and service names
 
-Samsung's `webapis` runtime is provided by the TV and is not distributed here.
+Samsung's `webapis` and `tizentvwasm` runtime bindings are provided by the TV and are not distributed here.
 The launcher uses installed native icons at runtime where accessible, with plain
 text fallback marks. Third-party service logos downloaded during private testing
 are not included in this repository. Brand names identify the installed apps and

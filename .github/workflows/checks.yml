@@ -21,3 +21,4 @@ jobs:
       - run: python tools/tests/launcher.py
       - run: python tools/tests/night.py
       - run: python tools/tests/browser-decoder.py
+      - run: python tools/tests/remux.py

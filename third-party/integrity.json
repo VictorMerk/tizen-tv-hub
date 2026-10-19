@@ -1,3 +1,5 @@
 {
-  "cinema/hls.min.js": "5ff2d714de30be428fc77b13e01db9a4b4cf015e9b4d6b3e8864b65d3d7d3ed7"
+  "cinema/hls.min.js": "5ff2d714de30be428fc77b13e01db9a4b4cf015e9b4d6b3e8864b65d3d7d3ed7",
+  "cinema/mp4box.min.js": "3b09dc606b37de1312d6c55c8bc55089a1e0a5aacef01c16bcaa9703725ad2a2",
+  "cinema/MP4BOX-LICENSE": "ebad0332150a08f37389158289d93ab2f70b0ee8717d1db9b3d002febc6c5047"
 }

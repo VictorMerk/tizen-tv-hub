@@ -53,6 +53,9 @@
     }
     window.NightSites={register:function(name,client){clients[name]=client;},source:source,servers:function(){return [
         {id:'movy-dallas',label:'Movy / Dallas'},
-        {id:'cinejoy',label:'Cinejoy / Nebula'}
+        {id:'cinejoy',label:'Cinejoy / Nebula'},
+        {id:'cinejoy-lisbon',label:'Cinejoy / Lisbon'},
+        {id:'cinejoy-solara',label:'Cinejoy / Solara'},
+        {id:'cinejoy-athens',label:'Cinejoy / Athens'}
     ];}};
 })();

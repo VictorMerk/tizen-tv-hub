@@ -10,7 +10,7 @@ Built and physically tested on a **2020 Samsung Q60T, Tizen 5.5 / Chromium 69**.
 **Two optional apps, installed directly on the TV:**
 
 - **TVStart** opens your existing Netflix, Prime Video and other installed apps. Pin favorites, rearrange them, or enable the default fast mode.
-- **Movie Night TV** provides a TV-sized catalogue, title details, series/episode picker and a consistent player. Browse paged movies, series or a mixed Discover view; choose a source, available resolution and audio track. Movy and Cinejoy are also available through converted service clients.
+- **Movie Night TV** provides a TV-sized catalogue, title details, series/episode picker and a consistent player. Browse paged movies, series or a mixed Discover view; choose a source, available resolution and audio track. Cinejoy's four providers have their own submenu; additional sources sit under Weitere Quellen. A [TV-local converter](docs/NATIVE-CONVERTER.md) lets supported Cinejoy streams use Samsung's native HD decoder.
 
 After installation, neither app needs your PC to remain on. Movie Night needs an
 internet connection and working third-party catalogue/stream services. TVStart's

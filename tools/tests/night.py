@@ -84,7 +84,7 @@ with sync_playwright() as p:
     assert '5692000' in page.evaluate('__av.lock')
     page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^720p')).click()
     page.wait_for_function('() => NightPlayer.state().prepared && NightPlayer.state().quality===720')
-    page.locator('#play-actions button').nth(3).click();page.get_by_role('button',name=re.compile('^Salem')).click()
+    page.locator('#play-actions button').nth(3).click();page.get_by_role('button',name=re.compile('^Weitere Quellen')).click();page.get_by_role('button',name=re.compile('^Salem')).click()
     page.wait_for_function('() => NightPlayer.state().server==="salem" && NightPlayer.state().prepared')
     assert page.evaluate('NightPlayer.state().engine')=='native'
     assert page.evaluate('NightPlayer.state().quality')==720
@@ -181,6 +181,28 @@ with sync_playwright() as p:
     assert page.get_by_role('button',name=re.compile('^Streamstufen ohne')).count()==1
     assert page.get_by_role('button',name=re.compile('^1080p-Quelle')).count()==0
     page.keyboard.press('Escape');page.evaluate('NightPlayer.close()')
+    # Keep the default source menu small, with all four Cinejoy providers reachable.
+    page.evaluate("var m="+json.dumps(fixture[0])+";NightUI.saveProgress(m,null,120,7200,'cinejoy');NightPlayer.play(m,null,120)")
+    page.wait_for_function('NightPlayer.state().prepared')
+    page.locator('#play-actions button').nth(3).click()
+    assert page.locator('.sheet-options button').count()<=6
+    assert page.get_by_role('button',name=re.compile('^Salem')).count()==0
+    page.get_by_role('button',name=re.compile('^Cinejoy')).click()
+    assert page.locator('.sheet-options button').count()==5
+    for name in ['Nebula','Lisbon','Solara','Athens']:assert page.locator('.sheet-options button').filter(has_text='Cinejoy / '+name).count()==1
+    page.keyboard.press('Escape');page.evaluate('NightPlayer.close()')
+    # The native converter retains the remote source and requested height on quality changes.
+    page.evaluate("window.tizentvwasm={};window.__muxCalls=[];window.__muxHeight=1080;window.NightRemux={open:function(u,h){__muxCalls.push({url:u,height:h});__muxHeight=h;return Promise.resolve({url:'http://127.0.0.1:43210/test/index.m3u8',bitrate:4692000})},close:function(){},info:function(){return {measuredBitrate:4500000}}};__av.getTotalTrackInfo=function(){return [{type:'VIDEO',index:0,extra_info:JSON.stringify({Width:__muxHeight===1080?2592:1728,Height:__muxHeight,Bit_rate:99999999})}]};var m="+json.dumps(fixture[0])+";localStorage.setItem('night.quality.v1','1080');NightPlayer.play(m,null,120)")
+    page.wait_for_function("NightPlayer.state().prepared&&NightPlayer.state().engine==='remux'")
+    assert page.evaluate('NightPlayer.state().picture.bitrate')==4692000
+    assert page.evaluate('NightPlayer.state().picture.measuredBitrate')==4500000
+    assert page.evaluate('__av.url')=='http://127.0.0.1:43210/test/index.m3u8'
+    page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^720p')).click()
+    page.wait_for_function('NightPlayer.state().prepared&&__muxCalls.length===2')
+    assert page.evaluate('__muxCalls[1].height')==720
+    assert page.evaluate('__muxCalls[1].url')==page.evaluate('__muxCalls[0].url')
+    assert page.evaluate('NightPlayer.state().time')==120
+    page.evaluate('NightPlayer.close()')
     assert not errors,errors
     browser.close()
 print('PASS: remote grid/detail/back focus; native play/pause; real quality options and bitrate lock; source/audio selection; late callback cancellation; series and auto-next; paged movies/series and page restoration')

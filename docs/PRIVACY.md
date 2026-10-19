@@ -14,6 +14,11 @@ requested title. There is no project-operated proxy or analytics service.
 Successful public catalogue responses are cached for 30 minutes with bounded storage.
 Resume positions, episode numbers and selected provider IDs are kept for up to 30 titles. A global quality preference is also stored locally. Recent media-segment byte/duration totals are held in memory to estimate the stream data rate; media payloads are not retained by that feature.
 Stream URLs and playback tokens stay in memory and are not written to the resume cache.
+The native converter holds up to two converted fragments in RAM during playback.
+Its HTTP listener binds only to the TV's loopback address and uses a random session
+path. It forwards only registered media resources. Closing playback stops the worker,
+aborts its fetches and closes its sockets. Converted media is never written to disk.
+See [the converter data path](NATIVE-CONVERTER.md).
 Runtime diagnostics are bounded and stay in the app's memory. No telemetry is uploaded
 to the repository owner. Upstream services have their own policies and availability.
 
