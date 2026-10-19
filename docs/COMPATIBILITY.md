@@ -4,7 +4,7 @@
 
 - Samsung Q60T (2020), model family GQ65Q60TGUXZG.
 - Tizen 5.5, Chromium 69, firmware 2743.0.
-- Public release baseline: Movie Night TV 0.5 and TVStart 2.2.
+- Public release baseline: Movie Night TV 0.6 and TVStart 2.2.
 
 Samsung documents its engine versions in [Web Engine Specifications](https://developer.samsung.com/smarttv/develop/specifications/web-engine-specifications.html).
 The manifest requires Tizen 5.5. Newer models may work but have not been physically
@@ -58,6 +58,24 @@ For Spider-Man: Brand New Day, the previous provider returned separate 2592x1080
 
 A sampled Atlas Buddy stream advertised 5 Mbit/s while recent segment payloads measured roughly 3 Mbit/s; the measurement varies by scene. An alternative Tucson rendition also failed on this TV, and the original HEVC provider was not established as a usable direct source. No general claim of sharper pictures or 4K support follows from these tests.
 
-Current Cinejoy client code contains nullish-coalescing syntax. A required 96-byte Svelte bootstrap fragment failed to compile on this TV with `Unexpected token ?`. No Cinejoy playback or cleaner-copy claim is made. Movy's catalogue lists Buddy in a 4K section, but playback/quality were not verified on the TV. See [source comparison](SOURCES.md).
+The unmodified Cinejoy client code contains nullish-coalescing syntax. A required 96-byte Svelte bootstrap fragment failed to compile on this TV with `Unexpected token ?`. Version 0.6 now converts its client and WASM for the TV; the results below supersede the earlier unmodified-client limitation. Movy's 4K catalogue label was not verified as playable 4K on this TV. See [source comparison](SOURCES.md).
 
 A later bounded Buddy comparison found no source on Vienna/Austin/Zurich/Lisbon; Kyoto offered only 720p in the sampled playlist. Salem and Helena advertised 1080p. Helena prepared and played through Samsung AVPlay at reported 1920x1080 (declared 5.43 Mbit/s), preserving the position. The user reported that Helena was still not sharp. Neither tested path established a satisfactory clean picture. Provider availability can change.
+
+
+## Movy and Cinejoy adapters, 19 October 2026
+
+Both clients were packaged locally and checked after installation. Native fetch remained intact: no development PC browser, resolver or playback server was involved in these TV requests. The TV still uses Chromium 69, not a newly installed browser.
+
+| Sample | Adapter | Observed result |
+| --- | --- | --- |
+| Buddy | Movy / Dallas | Native player reported 1280x692. User confirmed picture and sound, but wanted 1080p. The sampled playlist only advertised that 720p-class rendition. |
+| Buddy | Cinejoy / Nebula | Browser decoder failed on the higher rendition (read as 1924x1040), then the installed app retried at 1280x692 on Cinejoy. The user reported it was still 720p. |
+| Inception | Cinejoy / Nebula | Higher rendition failed; retry played at reported 1728x720. |
+| Inception | Movy / Dallas | Missing-resolution selection fix increased reported playback from 640x266 (0.24 Mbit/s) to 1280x534 (1.01 Mbit/s). |
+| Breaking Bad S1E1 | Cinejoy / Nebula | Fresh installed-package playback advanced at reported 1920x1080. This establishes that this service is not universally limited to 720p on the TV. |
+| Breaking Bad S1E1 | Movy / Dallas | Playlist omitted resolution labels. Before the selection fix it played 640x360; selecting the higher 3.5 Mbit/s rung played 1280x720. |
+
+Advancing clocks and track metadata do not independently prove audible output or visual sharpness. Only the stated user confirmations are human verification; full-film playback and 4K remain unverified. Samsung native decoder configuration and a typed local-playlist experiment did not recover Buddy's higher rendition; the experimental files were removed and filesystem privileges are not part of the final app.
+
+Other sampled Movy providers returned HTTP 403/404 or server errors on this packaged TV app. Cinejoy Lisbon/Athens did not return a usable Buddy source, and Solara's sampled playlist returned HTTP 403. These paths are not advertised as working menu options. No response restriction was bypassed. See [client setup](SITE-CLIENTS.md).

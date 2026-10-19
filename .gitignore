@@ -16,3 +16,5 @@ author-signature.xml
 signature1.xml
 diagnostics/
 .DS_Store
+.site-build/
+cinema/site-clients/

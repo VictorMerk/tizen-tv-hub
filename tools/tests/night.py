@@ -127,6 +127,60 @@ with sync_playwright() as p:
     page.wait_for_function('() => NightPlayer.state().prepared')
     assert page.evaluate('NightPlayer.state().quality')=='auto','Auto preference was not retained'
     page.evaluate('NightPlayer.close()')
+
+    # Site adapters keep the service's ordinary metadata and normalize its result.
+    page.evaluate("""window.__siteCalls=[];window.__movieResult={sources:[
+      {url:'https://files.test/1080.m3u8',quality:'1080p',type:'hls'},
+      {url:'https://files.test/720.m3u8',quality:'720p',type:'hls'},
+      {url:'https://files.test/2160.m3u8',quality:'2160p',type:'hls'}]};
+      NightSites.register('movy',{providers:[{name:'Miami',get:function(args){__siteCalls.push(args);return Promise.resolve(__movieResult)}}]});
+      NightSites.register('cinejoy',{movie:function(){__siteCalls.push(Array.from(arguments));return Promise.resolve({stream:[{playlist:'https://files.test/cinejoy.m3u8',type:'hls'}]})},series:function(){__siteCalls.push(Array.from(arguments));return Promise.resolve({stream:[{playlist:'https://files.test/episode.m3u8',type:'hls'}]})}});""")
+    result=page.evaluate("async()=>await NightSites.source({id:'tt123',tmdbId:'42',type:'series',name:'A show',year:2026},{season:2,episode:3},'cinejoy').promise")
+    assert result['provider']=='Cinejoy / Nebula'
+    assert page.evaluate('__siteCalls[0]')==['Nebula','42',2,3,'tt123',2026,'A show']
+    result=page.evaluate("async()=>await NightSites.source({id:'tt123',tmdbId:'42',type:'movie',name:'A film',year:2026},null,'movy').promise")
+    assert len(result['sources'])==3
+    assert page.evaluate('__siteCalls[1].extraData.mediaType')=='movie'
+    # Empty payloads must reject, rather than leaving the outer request pending.
+    message=page.evaluate("async()=>{var old=__movieResult;__movieResult={sources:[]};try{await NightSites.source({tmdbId:'42',type:'movie'},null,'movy').promise;return 'unexpected success'}catch(e){return e.message}finally{__movieResult=old}}")
+    assert 'keine abspielbare Quelle' in message
+    # Cancelling a slow upstream operation rejects once and ignores its late result.
+    assert page.evaluate("""async()=>{NightSites.register('movy',{providers:[{name:'Miami',get:function(){return new Promise(function(resolve){window.__lateSite=resolve})}}]});var req=NightSites.source({tmdbId:'42',type:'movie'},null,'movy');await Promise.resolve();req.cancel();req.cancel();try{await req.promise;return false}catch(e){__lateSite(__movieResult);return e.message==='cancelled'}}""")
+    page.evaluate("NightSites.register('movy',{providers:[{name:'Miami',get:function(args){__siteCalls.push(args);return Promise.resolve(__movieResult)}}]})")
+    page.route('https://files.test/**',lambda r:r.fulfill(headers={'Access-Control-Allow-Origin':'*'},body='#EXTM3U\n#EXT-X-TARGETDURATION:6\n#EXTINF:6,\nsegment.ts\n#EXT-X-ENDLIST'))
+    page.evaluate("localStorage.setItem('night.quality.v1','1080');var m="+json.dumps(fixture[0])+";m.tmdbId='42';NightUI.saveProgress(m,null,120,7200,'movy');NightPlayer.play(m,null,120)")
+    page.wait_for_function("()=>NightPlayer.state().prepared&&__av.url.includes('/1080.m3u8')")
+    page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^2160p')).click()
+    page.wait_for_function("()=>NightPlayer.state().prepared&&__av.url.includes('/2160.m3u8')")
+    assert page.evaluate('NightPlayer.state().time')==120
+    page.locator('#play-actions button').nth(4).click();page.get_by_role('button',name=re.compile('^720p')).click()
+    page.wait_for_function("()=>NightPlayer.state().prepared&&__av.url.includes('/720.m3u8')")
+    assert page.evaluate('JSON.parse(localStorage.getItem("night.quality.v1"))')==720
+    # Decoder failure tries a lower rung of the same service before another provider.
+    page.evaluate("NightPlayer.close();localStorage.setItem('night.quality.v1','1080');var m="+json.dumps(fixture[0])+";m.tmdbId='42';NightUI.saveProgress(m,null,120,7200,'cinejoy');NightPlayer.play(m,null,120)")
+    page.wait_for_function("()=>NightPlayer.state().prepared&&NightPlayer.state().server==='cinejoy'")
+    # Provide a normal adaptive ladder on this mocked browser decoder.
+    page.evaluate("NightPlayer.close();NightSites.register('cinejoy',{movie:function(){return Promise.resolve({stream:[{playlist:'https://media.test/master.m3u8',type:'hls'}]})}});var m="+json.dumps(fixture[0])+";m.tmdbId='42';NightUI.saveProgress(m,null,120,7200,'cinejoy');NightPlayer.play(m,null,120)")
+    page.wait_for_function("()=>NightPlayer.state().prepared&&NightPlayer.state().quality===1080")
+    page.evaluate("__av.listener.onerror('DecodeError')")
+    page.wait_for_function("()=>NightPlayer.state().prepared&&NightPlayer.state().quality===720")
+    assert page.evaluate('NightPlayer.state().server')=='cinejoy'
+    assert page.evaluate('JSON.parse(localStorage.getItem("night.quality.v1"))')==1080
+    assert 'Decoder-Fallback' in page.locator('#play-source').inner_text()
+    page.locator('#play-actions button').nth(4).click()
+    failed_choice=page.get_by_role('button',name=re.compile('^1080p'))
+    assert 'Erneut testen' in failed_choice.inner_text() and 'fehlgeschlagen' in failed_choice.inner_text()
+    page.keyboard.press('Escape');page.evaluate('NightPlayer.close()')
+
+    # A ladder without RESOLUTION must not lock the lowest bitrate for a 1080p preference.
+    page.route('https://unknown.test/**',lambda r:r.fulfill(headers={'Access-Control-Allow-Origin':'*'},body='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=700000\nlow.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=3500000\nhigh.m3u8\n'))
+    page.evaluate("NightSites.register('movy',{providers:[{name:'Miami',get:function(){return Promise.resolve({sources:[{url:'https://unknown.test/master.m3u8',quality:'Auto',type:'hls'}]})}}]});var m="+json.dumps(fixture[0])+";m.tmdbId='42';NightUI.saveProgress(m,null,120,7200,'movy');NightPlayer.play(m,null,120)")
+    page.wait_for_function("()=>NightPlayer.state().prepared&&NightPlayer.state().server==='movy'")
+    assert 'BITRATES=3500000~3500000' in page.evaluate('__av.lock')
+    page.locator('#play-actions button').nth(4).click()
+    assert page.get_by_role('button',name=re.compile('^Streamstufen ohne')).count()==1
+    assert page.get_by_role('button',name=re.compile('^1080p-Quelle')).count()==0
+    page.keyboard.press('Escape');page.evaluate('NightPlayer.close()')
     assert not errors,errors
     browser.close()
 print('PASS: remote grid/detail/back focus; native play/pause; real quality options and bitrate lock; source/audio selection; late callback cancellation; series and auto-next; paged movies/series and page restoration')

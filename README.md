@@ -10,7 +10,7 @@ Built and physically tested on a **2020 Samsung Q60T, Tizen 5.5 / Chromium 69**.
 **Two optional apps, installed directly on the TV:**
 
 - **TVStart** opens your existing Netflix, Prime Video and other installed apps. Pin favorites, rearrange them, or enable the default fast mode.
-- **Movie Night TV** provides a TV-sized catalogue, title details, series/episode picker and a consistent player. Browse paged movies, series or a mixed Discover view; choose a source, available resolution and audio track.
+- **Movie Night TV** provides a TV-sized catalogue, title details, series/episode picker and a consistent player. Browse paged movies, series or a mixed Discover view; choose a source, available resolution and audio track. Movy and Cinejoy are also available through converted service clients.
 
 After installation, neither app needs your PC to remain on. Movie Night needs an
 internet connection and working third-party catalogue/stream services. TVStart's
@@ -35,8 +35,11 @@ universal pre-signed installer.
    ```powershell
    git clone https://github.com/VictorMerk/tizen-tv-hub.git
    cd tizen-tv-hub
+   py scripts/prepare-sites.py --esbuild PATH_TO_ESBUILD --wasm-opt PATH_TO_WASM_OPT
    .\scripts\build.ps1 -Profile "YourCertificateProfile"
    ```
+
+   Prepare esbuild and Binaryen first; see [site-client setup](docs/SITE-CLIENTS.md). Generated service clients are built locally and are not stored in this repository.
 
 3. Install the signed packages using Device Manager or explicitly target your TV:
 

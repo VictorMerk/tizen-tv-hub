@@ -16,6 +16,7 @@
         },function(e){clearTimeout(timer);throw e;});
     }
     function source(meta,episode,server,onTrying){
+        if(/^(movy|cinejoy)(-|$)/.test(server))return NightSites.source(meta,episode,server);
         if(server==='vidrift'||server==='vidrift-auto')return vidrift(meta,episode,server==='vidrift'?'atlas':null);
         var type=meta.type==='series'?'tv':'movie';
         var path='/api/stream/v1/'+type+'/'+encodeURIComponent(meta.tmdbId)+(type==='tv'?'/'+episode.season+'/'+episode.episode:'');
@@ -49,6 +50,6 @@
         lines.forEach(function(line,i){if(line.indexOf('#EXT-X-STREAM-INF:')!==0)return;var resolution=/RESOLUTION=(\d+)x(\d+)/i.exec(line),bandwidth=/BANDWIDTH=(\d+)/.exec(line);var next=lines[i+1];if(next&&next.charAt(0)!=='#')variants.push({height:resolution?Number(resolution[2]):0,width:resolution?Number(resolution[1]):0,bitrate:bandwidth?Number(bandwidth[1]):0,url:new URL(next,url).href});});
         return variants;
     });}
-    function vidriftServers(){return [{id:'vidrift',label:'VidRift / HD bevorzugt'},{id:'vidrift-auto',label:'VidRift / Alternativ'}];}
+    function vidriftServers(){return (window.NightSites?NightSites.servers():[]).concat([{id:'vidrift',label:'VidRift / HD bevorzugt'},{id:'vidrift-auto',label:'VidRift / Alternativ'}]);}
     window.NightService={json:json,source:source,playlist:playlist,log:log,servers:function(){if(servers)return Promise.resolve(servers);return json('/api/servers').then(function(r){servers=vidriftServers().concat(r.servers||[]);return servers;},function(){servers=vidriftServers().concat([{id:'salem',label:'Salem'},{id:'tucson',label:'Tucson'}]);return servers;});}};
 })();

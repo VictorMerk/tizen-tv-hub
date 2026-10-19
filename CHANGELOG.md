@@ -1,5 +1,15 @@
 # Changelog
 
+## Movie Night TV 0.6
+
+- Add lazy-loaded Movy / Dallas and Cinejoy / Nebula adapters using locally converted ordinary service clients. No PC is needed during playback.
+- Convert Cinejoy's WASM operations for Chrome 69 and provide the required small browser compatibility shims.
+- Switch separate resolution files at the current position and retry lower adaptive renditions before leaving a service after decoder failure.
+- Fix native selection of the lowest bitrate when a playlist omits resolution metadata.
+- Remove the misleading 1080p action that switched to VidRift from the quality menu.
+- Add fixture coverage for source metadata, cancellation, empty responses, file switching, decoder fallback and missing-resolution ladders.
+- Document per-title playback limits; a listed 1080p/4K source is not a guarantee of supported TV playback.
+
 ## Movie Night TV 0.5 / TVStart 2.2
 
 - Prefer the normal VidRift Atlas H.264 source path; retain the old provider path as an explicit alternative.

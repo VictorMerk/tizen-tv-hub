@@ -38,6 +38,8 @@ use the same author certificate. Never commit a `.p12`, profile password or DUID
 
 ## 4. Build and install on Windows
 
+For Movie Night, first [prepare the converted site clients](SITE-CLIENTS.md) with esbuild and Binaryen. TVStart alone does not need that step. The clients are generated locally; no PC is needed during playback.
+
 From the repository root, in PowerShell:
 
 ```powershell
@@ -56,8 +58,8 @@ computer or build through Tizen Studio; do not change machine-wide policy for th
 ### macOS/Linux or IDE installation
 
 The supplied PowerShell build helper is tested on Windows. On other supported SDK hosts,
-use Samsung's CLI or import each app folder as an existing Tizen Web project. The runtime
-has no build/transpile step. Sign each folder with your own profile:
+use Samsung's CLI or import each app folder as an existing Tizen Web project. Prepare the clients before signing the cinema folder. The installed runtime
+has no PC build/transpile dependency. Sign each folder with your own profile:
 
 ```sh
 tizen package -t wgt -s YourCertificateProfile -o builds -- launcher

@@ -7,11 +7,13 @@ can serve a different file, or the same file through another provider.
 
 ## Current choices
 
+- **Movy / Dallas** and **Cinejoy / Nebula** use converted ordinary upstream clients. See [preparation](SITE-CLIENTS.md) and [physical sample results](COMPATIBILITY.md). These are source adapters inside our interface, not a modern browser installation. Quality and compatibility vary by title. No 4K claim is made.
+
 - **VidRift / HD bevorzugt** requests the normal Atlas provider option with the
   frontend's H.264 compatibility parameter. Atlas exposed working 1080p variants for
   the tested Buddy and Spider-Man samples. Availability and master quality vary.
 - **VidRift / Alternativ** retains the previous automatic provider selection.
-- The Movie Night server list remains available. The quality menu can try the HD
+- The Movie Night server list remains available. The source menu can compare another
   path at the current position. A provider can return a fallback provider; the
   overlay displays the actual returned provider where supplied.
 
@@ -28,8 +30,8 @@ that a particular film has a cleaner copy on a particular TV.
 
 | Candidate | What was established |
 | --- | --- |
-| [Movy](https://www.movy.sx/de) | Catalogue includes Buddy in a 4K section. A clean 4K stream and TV playback were not verified. |
-| [Cinejoy](https://cinejoy.pk/) | Current client needs modern JavaScript; a required bootstrap fragment fails on Chromium 69. A TV adapter and playback verification would be required. |
+| [Movy](https://www.movy.sx/de) | Dallas adapter plays sampled titles on the TV. Buddy's sampled file is 720p-class. Its catalogue 4K label is not a verified TV playback capability. |
+| [Cinejoy](https://cinejoy.pk/) | Unmodified website needs newer JavaScript. Version 0.6 converts its client and WASM; Nebula played Buddy at a lower rendition and Breaking Bad S1E1 at reported 1080p. |
 | Original VidRift HEVC option | Listed by its ordinary frontend; no reliable direct playback improvement was established in the investigation. |
 | Other entries in the supplied list | No complete, current playback/visual-quality verification. They are not bundled as working providers. |
 

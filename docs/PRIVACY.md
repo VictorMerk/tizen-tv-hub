@@ -7,8 +7,8 @@ It does not access streaming-app cookies, passwords or profile data.
 
 Movie Night sends catalogue/search/title requests to `movienig.ht`. Its ordinary source
 API supplies playback URLs. The VidRift path requests the normal embed metadata from
-`embed.vidrift.in`, then uses the playback token issued there to request sources. Media
-requests go to the returned hosts; these services can see the TV's network address and
+`embed.vidrift.in`, then uses the playback token issued there to request sources.
+Movy source requests go to `api.wecollege.net`; Cinejoy source requests go to `api.wing.st`, using their ordinary client protocol. Title identifiers, title/year and episode numbers are sent as needed. Converted service clients and Cinejoy's converted WASM are installed locally. Media requests go to the returned hosts; these services can see the TV's network address and
 requested title. There is no project-operated proxy or analytics service.
 
 Successful public catalogue responses are cached for 30 minutes with bounded storage.
@@ -23,3 +23,5 @@ users out of installed streaming apps. No installation step needs account-data c
 Do not attach tokens, cookies, full signed playback URLs, certificate files, DUIDs or
 private IP/device logs to a public issue. Report model/year, Tizen/firmware version,
 app version, selected provider, visible error and reproduction steps instead.
+
+The Chrome 69 script policy permits WebAssembly compilation with `unsafe-eval`; scripts remain limited to installed files and remote frames remain disabled. See [client preparation and review](SITE-CLIENTS.md). The final app does not require filesystem privileges.

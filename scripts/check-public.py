@@ -13,11 +13,13 @@ if (root / '.git').exists():
     paths = [root / p for p in result.stdout.decode().split('\0') if p]
 else:
     paths = [p for p in root.rglob('*') if p.is_file() and
-             not any(x in {'.git', '.build-stage', 'builds', '__pycache__'} for x in p.relative_to(root).parts)]
+             not any(x in {'.git', '.build-stage', '.site-build', 'site-clients', 'builds', '__pycache__'} for x in p.relative_to(root).parts)]
 
 problems = []
 for path in paths:
     relative = path.relative_to(root).as_posix()
+    if relative.startswith(('.site-build/', 'cinema/site-clients/')):
+        problems.append(relative + ': generated upstream client must not be published')
     if path.suffix.lower() in {'.p12', '.pfx', '.pem', '.key', '.wgt', '.log', '.token'}:
         problems.append(relative + ': private/generated file type')
     if path.name in {'author-signature.xml', 'signature1.xml', 'profiles.xml'}:

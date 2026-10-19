@@ -15,14 +15,15 @@ $stageRoot = Join-Path $root ('.build-stage\' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Force $outputRoot,$stageRoot | Out-Null
 $projects = @(
     @{Name='launcher'; Package='TVStart.wgt'; Files=@('start.html','config.xml','icon.png','launcher.css','launcher.js','apps.js')},
-    @{Name='cinema'; Package='MovieNightTV.wgt'; Files=@('index.html','config.xml','icon.png','tv-service.js','tv-ui.js','tv-player.js','tv-browser-player.js','tv-ui.css','hls.min.js','HLS-LICENSE')}
+    @{Name='cinema'; Package='MovieNightTV.wgt'; Files=@('index.html','config.xml','icon.png','tv-sites.js','site-clients','tv-service.js','tv-ui.js','tv-player.js','tv-browser-player.js','tv-ui.css','hls.min.js','HLS-LICENSE')}
 )
 foreach ($project in $projects) {
     if ($Target -ne 'all' -and $Target -ne $project.Name) { continue }
+    if ($project.Name -eq 'cinema' -and (-not (Test-Path (Join-Path $root 'cinema/site-clients/cinejoy.js')) -or -not (Test-Path (Join-Path $root 'cinema/site-clients/movy.js')))) { throw 'Prepare the site clients first: py scripts/prepare-sites.py --esbuild PATH_TO_ESBUILD' }
     $stage = Join-Path $stageRoot $project.Name
     New-Item -ItemType Directory $stage | Out-Null
     foreach ($name in $project.Files) {
-        Copy-Item -LiteralPath (Join-Path (Join-Path $root $project.Name) $name) -Destination $stage
+        Copy-Item -LiteralPath (Join-Path (Join-Path $root $project.Name) $name) -Destination $stage -Recurse
     }
     $result = & $cli package -t wgt -s $Profile -o $outputRoot -- $stage 2>&1
     $result | Write-Output
