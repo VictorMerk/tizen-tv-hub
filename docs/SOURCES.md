@@ -44,7 +44,7 @@ The preference defaults to 1080p. A 1920x800 widescreen picture can be the cropp
 active image of a 1080p rendition; the app preserves its aspect ratio and shows exact
 dimensions in the quality panel. A source at 720p stays lower-resolution even if
 1080p is preferred. A 1080p frame can still contain compression or upscaled low-detail
-material or a cinema recording. The user confirmed that the latest Buddy preview looked good, but identified the tested Spider-Man source as a phone/cinema recording. Frame dimensions alone cannot distinguish those cases.
+material or a cinema recording. The user briefly found the Buddy preview good, then reported poor quality again while it still decoded at 1920x1080 with zero reported dropped frames. The tested Spider-Man source was identified by the user as a phone/cinema recording. A subsequent Helena source played at 1920x1080 through native AVPlay, but the user also found it unsharp. Frame dimensions alone cannot distinguish those cases.
 
 The measured data rate is compressed main-segment payload bytes divided by segment
 duration across up to eight recent samples. It is approximate, scene-dependent and
